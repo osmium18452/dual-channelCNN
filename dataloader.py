@@ -1,16 +1,17 @@
 import numpy as np
 import scipy.io
 from tqdm import tqdm
+import time
 
 
 class Data:
-	classes, classesIndex = [], []
-	allPatch, allPatchLabel = [], []
-	trainPatch, testPatch = [], []
-	trainLabel, testLabel = [], []
+	classPatches, classSpectrum, classIndex = [], [], []
+	allPatch, allPatchLabel, allSpectrum = [], [], []
+	trainPatch, trainLabel, trainSpectrum = [], [], []
+	testPatch, testLabel, testSpectrum = [], [], []
 	numEachClass = []
 
-	def __init__(self, pathName, matName, patchSize, portion):
+	def __init__(self, pathName, matName, patchSize, portionOrNum):
 		# load data
 		self.data = scipy.io.loadmat(pathName[0])[matName[0]]
 		self.label = scipy.io.loadmat(pathName[1])[matName[1]]
@@ -23,8 +24,9 @@ class Data:
 		self.bands = self.data.shape[2]
 
 		for i in range(self.numClasses + 1):
-			self.classes.append([])
-			self.classesIndex.append([])
+			self.classPatches.append([])
+			self.classSpectrum.append([])
+			self.classIndex.append([])
 
 		# normalize and pad
 		self.data = self.data.astype(float)
@@ -36,7 +38,10 @@ class Data:
 		self.data = np.pad(self.data, ((padSize, padSize), (padSize, padSize), (0, 0)), "symmetric")
 
 		self.__slice()
-		self.__prepareDataByPortion(portion)
+		if portionOrNum < 1:
+			self.__prepareDataByPortion(portionOrNum)
+		else:
+			self.__prepareDataByNum(portionOrNum)
 
 	def __patch(self, i, j):
 		widthSlice = slice(i, i + self.patchSize)
@@ -48,39 +53,72 @@ class Data:
 			for i in range(self.height):
 				for j in range(self.width):
 					tmpLabel = self.label[i, j]
+					tmpSpectrum = self.data[i, j, :]
 					tmpPatch = self.__patch(i, j)
 					self.allPatchLabel.append(tmpLabel)
 					self.allPatch.append(tmpPatch)
+					self.allSpectrum.append(tmpSpectrum)
 					if tmpLabel != 0:
-						self.classes[tmpLabel].append(tmpPatch)
-						self.classesIndex[tmpLabel].append(i * self.height + j)
+						self.classPatches[tmpLabel].append(tmpPatch)
+						self.classSpectrum[tmpLabel].append(tmpSpectrum)
+						self.classIndex[tmpLabel].append(i * self.height + j)
 					pbar.update(1)
 		# self.numEachClass.append(0)
 		for i in range(self.numClasses + 1):
-			self.numEachClass.append(len(self.classesIndex[i]))
-		# print(np.shape(self.classes[i]))
+			self.numEachClass.append(len(self.classIndex[i]))
+
+	# print(np.shape(self.classes[i]))
 
 	def __prepareDataByPortion(self, portion):
 		np.random.seed(0)
-		# num=0
-		for i in range(self.numClasses):
-			label = i + 1
-			index = np.random.choice(self.numEachClass[label], int((self.numEachClass[label]) * portion + 0.5),
-									 replace=False)
-			# num+=len(index)
-			self.trainPatch.extend(self.classes[label][j] for j in index)
-			self.trainLabel.extend(label for j in range(len(index)))
+		with tqdm(total=self.numClasses, desc="dividing patches") as pbar:
+			for i in range(self.numClasses):
+				label = i + 1
 
-	# print(self.trainLabel)
+				index = np.random.choice(self.numEachClass[label], int((self.numEachClass[label]) * portion + 0.5),
+										 replace=False)
+				self.trainPatch.extend(self.classPatches[label][j] for j in index)
+				self.trainSpectrum.extend(self.classSpectrum[label][j] for j in index)
+				self.trainLabel.extend(label for j in range(len(index)))
+
+				index = np.setdiff1d(range(self.numEachClass[label]), index)
+				self.testLabel.extend(label for j in range(len(index)))
+				self.testPatch.extend(self.classPatches[label][j] for j in index)
+				self.testSpectrum.extend(self.classSpectrum[label][j] for j in index)
+				pbar.update(1)
+
+		# time.sleep(0.1)
+		print(np.shape(self.trainSpectrum), np.shape(self.trainPatch), np.shape(self.testSpectrum),
+			  np.shape(self.testPatch))
+
+	def __prepareDataByNum(self, num):
+		np.random.seed(0)
+		with tqdm(total=self.numClasses, desc="dividing patches") as pbar:
+			for i in range(self.numClasses):
+				label = i + 1
+				index = np.random.choice(self.numEachClass[label], num, replace=False)
+				self.trainPatch.extend(self.classPatches[label][j] for j in index)
+				self.trainSpectrum.extend(self.classSpectrum[label][j] for j in index)
+				self.trainLabel.extend(label for j in range(len(index)))
+
+				index = np.setdiff1d(range(self.numEachClass[label]), index)
+				self.testLabel.extend(label for j in range(len(index)))
+				self.testPatch.extend(self.classPatches[label][j] for j in index)
+				self.testSpectrum.extend(self.classSpectrum[label][j] for j in index)
+				pbar.update(1)
+
+		# time.sleep(0.1)
+		print(np.shape(self.trainSpectrum), np.shape(self.trainPatch),
+			  np.shape(self.testSpectrum), np.shape(self.testPatch))
 
 	def loadTrainData(self):
-		pass
+		return self.trainPatch, self.trainSpectrum, self.trainLabel
 
 	def loadTestData(self):
-		pass
+		return self.testPatch, self.testSpectrum, self.testLabel
 
 	def loadAllPatch(self):
-		return self.allPatch, self.allPatchLabel
+		return self.allPatch, self.allSpectrum, self.allPatchLabel
 
 
 if __name__ == "__main__":
@@ -93,7 +131,8 @@ if __name__ == "__main__":
 	# print([5 for i in range(10)])
 
 	data = Data(pathName, matName, 5, 0.1)
-	patch, label = data.loadAllPatch()
+	patch, spectrum, label = data.loadTrainData()
+	print(np.shape(patch),np.shape(spectrum),np.shape(label))
 # print(np.shape(patch[1]))
 # print(type(data.slice()))
 # allData=data.loadAllData()[:,:,1]
