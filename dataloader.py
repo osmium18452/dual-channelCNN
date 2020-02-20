@@ -3,6 +3,8 @@ import scipy.io
 from tqdm import tqdm
 from utils import convertToOneHot
 import time
+import random
+import scipy.ndimage
 
 
 class DataLoader:
@@ -14,7 +16,7 @@ class DataLoader:
 	trainNum = 0
 	testNum = 0
 
-	def __init__(self, pathName, matName, patchSize, portionOrNum):
+	def __init__(self, pathName, matName, patchSize, portionOrNum,ratio):
 		# load data
 		self.data = scipy.io.loadmat(pathName[0])[matName[0]]
 		self.label = scipy.io.loadmat(pathName[1])[matName[1]]
@@ -45,6 +47,8 @@ class DataLoader:
 			self.__prepareDataByPortion(portionOrNum)
 		else:
 			self.__prepareDataByNum(portionOrNum)
+		if ratio!=0:
+			self.__dataAugment(ratio)
 
 		self.trainLabel = np.array(self.trainLabel)
 		self.trainPatch = np.array(self.trainPatch)
@@ -62,7 +66,7 @@ class DataLoader:
 		return self.data[heightSlice, widthSlice, :]
 
 	def __slice(self):
-		with tqdm(total=self.height * self.width, desc="slicing HSI into patches") as pbar:
+		with tqdm(total=self.height * self.width, desc="slicing ") as pbar:
 			for i in range(self.height):
 				for j in range(self.width):
 					tmpLabel = self.label[i, j]
@@ -80,13 +84,9 @@ class DataLoader:
 		for i in range(self.numClasses):
 			self.numEachClass.append(len(self.classIndex[i]))
 
-	# print(self.numClasses)
-
-	# print(np.shape(self.classes[i]))
-
 	def __prepareDataByPortion(self, portion):
 		np.random.seed(0)
-		with tqdm(total=self.numClasses, desc="dividing patches") as pbar:
+		with tqdm(total=self.numClasses, desc="dividing") as pbar:
 			for i in range(self.numClasses):
 				label = i
 				index = np.random.choice(self.numEachClass[label], int((self.numEachClass[label]) * portion + 0.5),
@@ -103,10 +103,6 @@ class DataLoader:
 				self.testNum += len(index)
 
 				pbar.update(1)
-
-	# time.sleep(0.1)
-	# print(np.shape(self.trainSpectrum), np.shape(self.trainPatch), np.shape(self.testSpectrum),
-	# 	  np.shape(self.testPatch))
 
 	def __prepareDataByNum(self, num):
 		np.random.seed(0)
@@ -126,6 +122,53 @@ class DataLoader:
 				self.testNum += len(index)
 
 				pbar.update(1)
+
+	def __dataAugment(self, ratio):
+		index = np.random.choice(range(self.trainNum), int(self.trainNum*ratio), replace=False)
+		udPatch, udLabel, udSpectrum = [], [], []
+		lrPatch, lrLabel, lrSpectrum = [], [], []
+		noisePatch, noiseLabel, noiseSpectrum = [], [], []
+		angelPatch, angelLabel, angelSpectrum = [], [], []
+		with tqdm(total=len(index),desc="augmenting") as pbar:
+			for i in index:
+				udPatch.append(np.flipud(self.trainPatch[i]))
+				udSpectrum.append(self.trainSpectrum[i])
+				udLabel.append(self.trainLabel[i])
+
+				lrPatch.append(np.fliplr(self.trainPatch[i]))
+				lrSpectrum.append(self.trainSpectrum[i])
+				lrLabel.append(self.trainLabel[i])
+
+				noisePatch.append(self.trainPatch[i] + np.random.normal(0, 0.01, size=np.shape(self.trainPatch[0])))
+				noiseSpectrum.append(self.trainSpectrum[i])
+				noiseLabel.append(self.trainLabel[i])
+
+				angel = random.randrange(-180, 180, 30)
+				angelPatch.append(scipy.ndimage.interpolation.rotate(self.trainPatch[i], angel, axes=(1, 0),
+																	 reshape=False, output=None, order=3,
+																	 mode='constant', cval=0.0, prefilter=False))
+				angelSpectrum.append(self.trainSpectrum[i])
+				angelLabel.append(self.trainLabel[i])
+
+				pbar.update(1)
+		# print(np.shape(self.trainPatch),type(self.trainPatch))
+		self.trainPatch.extend(udPatch[i] for i in range(len(index)))
+		self.trainSpectrum.extend(udSpectrum[i] for i in range(len(index)))
+		self.trainLabel.extend(udLabel[i] for i in range(len(index)))
+
+		self.trainPatch.extend(lrPatch[i] for i in range(len(index)))
+		self.trainSpectrum.extend(lrSpectrum[i] for i in range(len(index)))
+		self.trainLabel.extend(lrLabel[i] for i in range(len(index)))
+
+		# print(np.shape(noisePatch),type(noisePatch))
+		self.trainPatch.extend(noisePatch[i] for i in range(len(index)))
+		self.trainSpectrum.extend(noiseSpectrum[i] for i in range(len(index)))
+		self.trainLabel.extend(noiseLabel[i] for i in range(len(index)))
+
+		# print(np.shape(angelPatch), type(angelPatch))
+		self.trainPatch.extend(angelPatch[i] for i in range(len(index)))
+		self.trainSpectrum.extend(angelSpectrum[i] for i in range(len(index)))
+		self.trainLabel.extend(angelLabel[i] for i in range(len(index)))
 
 	# time.sleep(0.1)
 	# print(np.shape(self.trainSpectrum), np.shape(self.trainPatch),
