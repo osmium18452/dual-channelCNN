@@ -120,6 +120,15 @@ class Data:
 	def loadAllPatch(self):
 		return self.allPatch, self.allSpectrum, self.allPatchLabel
 
+	def loadTrainPatchOnly(self):
+		return self.trainPatch, self.trainLabel
+
+	def loadTestPatchOnly(self):
+		return self.testPatch, self.testLabel
+
+	def loadAllPatchOnly(self):
+		return self.allPatch, self.allPatchLabel
+
 
 if __name__ == "__main__":
 	pathName = []
@@ -131,8 +140,8 @@ if __name__ == "__main__":
 	# print([5 for i in range(10)])
 
 	data = Data(pathName, matName, 5, 0.1)
-	patch, spectrum, label = data.loadTrainData()
-	print(np.shape(patch),np.shape(spectrum),np.shape(label))
+	patch, label = data.loadTrainPatchOnly()
+	print(np.shape(patch),np.shape(label))
 # print(np.shape(patch[1]))
 # print(type(data.slice()))
 # allData=data.loadAllData()[:,:,1]
