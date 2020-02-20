@@ -59,6 +59,7 @@ class DataLoader:
 
 		self.trainLabel = convertToOneHot(self.trainLabel, num_classes=self.numClasses)
 		self.testLabel = convertToOneHot(self.testLabel, num_classes=self.numClasses)
+		self.trainNum=self.trainLabel.shape[0]
 
 	def __patch(self, i, j):
 		widthSlice = slice(i, i + self.patchSize)
@@ -127,7 +128,7 @@ class DataLoader:
 		index = np.random.choice(range(self.trainNum), int(self.trainNum*ratio), replace=False)
 		udPatch, udLabel, udSpectrum = [], [], []
 		lrPatch, lrLabel, lrSpectrum = [], [], []
-		noisePatch, noiseLabel, noiseSpectrum = [], [], []
+		# noisePatch, noiseLabel, noiseSpectrum = [], [], []
 		angelPatch, angelLabel, angelSpectrum = [], [], []
 		with tqdm(total=len(index),desc="augmenting") as pbar:
 			for i in index:
@@ -139,9 +140,9 @@ class DataLoader:
 				lrSpectrum.append(self.trainSpectrum[i])
 				lrLabel.append(self.trainLabel[i])
 
-				noisePatch.append(self.trainPatch[i] + np.random.normal(0, 0.01, size=np.shape(self.trainPatch[0])))
-				noiseSpectrum.append(self.trainSpectrum[i])
-				noiseLabel.append(self.trainLabel[i])
+				# noisePatch.append(self.trainPatch[i] + np.random.normal(0, 0.01, size=np.shape(self.trainPatch[0])))
+				# noiseSpectrum.append(self.trainSpectrum[i])
+				# noiseLabel.append(self.trainLabel[i])
 
 				angel = random.randrange(-180, 180, 30)
 				angelPatch.append(scipy.ndimage.interpolation.rotate(self.trainPatch[i], angel, axes=(1, 0),
@@ -161,9 +162,9 @@ class DataLoader:
 		self.trainLabel.extend(lrLabel[i] for i in range(len(index)))
 
 		# print(np.shape(noisePatch),type(noisePatch))
-		self.trainPatch.extend(noisePatch[i] for i in range(len(index)))
-		self.trainSpectrum.extend(noiseSpectrum[i] for i in range(len(index)))
-		self.trainLabel.extend(noiseLabel[i] for i in range(len(index)))
+		# self.trainPatch.extend(noisePatch[i] for i in range(len(index)))
+		# self.trainSpectrum.extend(noiseSpectrum[i] for i in range(len(index)))
+		# self.trainLabel.extend(noiseLabel[i] for i in range(len(index)))
 
 		# print(np.shape(angelPatch), type(angelPatch))
 		self.trainPatch.extend(angelPatch[i] for i in range(len(index)))

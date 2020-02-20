@@ -49,8 +49,8 @@ correctPredictions = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correctPredictions, "float"))
 predictTestLabels = tf.argmax(pred, 1)
 init = tf.global_variables_initializer()
-# print(np.shape(trainPatch), np.shape(trainLabel))
-# exit(0)
+print(np.shape(trainPatch), np.shape(trainLabel))
+exit(0)
 
 with tf.Session() as sess:
 	sess.run(init)
