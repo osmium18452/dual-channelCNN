@@ -1,5 +1,6 @@
 import numpy as np
 
+LENGTH=200
 def convertToOneHot(vector, num_classes=None):
 	"""
 	Converts an input 1-D vector of integers into an output
