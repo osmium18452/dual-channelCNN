@@ -25,7 +25,6 @@ BATCH_SIZE = args.batch_size
 RATIO = args.ratio
 AUGMENT_RATIO = args.aug
 PATCH_SIZE = args.patch_size
-LENGTH=400
 
 pathName = []
 pathName.append("./data/Indian_pines.mat")
@@ -48,9 +47,8 @@ w = tf.placeholder(shape=[None, dataloader.bands, 1], dtype=tf.float32)
 x = tf.placeholder(shape=[None, dataloader.patchSize, dataloader.patchSize, dataloader.bands], dtype=tf.float32)
 y = tf.placeholder(shape=[None, dataloader.numClasses], dtype=tf.float32)
 
-pred = DCCNN(x, w, dataloader.numClasses)
-# print(tf.shape(pred),"****************************************************")
-softmaxOutput = tf.nn.softmax(pred)
+# pred = DCCNN(x, w, dataloader.numClasses)
+pred=CNN(x,dataloader.numClasses)
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
 optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(loss)
@@ -85,7 +83,7 @@ with tf.Session() as sess:
 				batch_w = trainSpectrum[iter * BATCH_SIZE:, :, :]
 				batch_x = trainPatch[iter * BATCH_SIZE:, :, :, :]
 				batch_y = trainLabel[iter * BATCH_SIZE:, :]
-				_, batchLoss, trainAcc = sess.run([optimizer, loss, accuracy],
+				_, __, ___ = sess.run([optimizer, loss, accuracy],
 												  feed_dict={w: batch_w, x: batch_x, y: batch_y})
 
 			idx = np.random.choice(dataloader.testNum, size=BATCH_SIZE, replace=False)

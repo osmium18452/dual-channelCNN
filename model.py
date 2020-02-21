@@ -1,34 +1,22 @@
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 
 
-def CNN(x, output):
-	net = tf.layers.conv2d(
-		x,
-		filters=200,
-		kernel_size=3,
-		strides=1,
-		padding="same",
-		activation=tf.nn.relu,
-		name="convLayer"
-	)
-	net = tf.layers.max_pooling2d(net, 2, strides=2, padding="same")
-
-	net = tf.layers.conv2d(
-		net,
-		filters=300,
-		kernel_size=3,
-		padding="same",
-		activation=tf.nn.relu
-	)
-	net = tf.layers.max_pooling2d(net, 2, strides=2, padding="same")
-
-	net = tf.layers.flatten(net)
-
-	net = tf.layers.dense(net, 200, activation=tf.nn.relu)
-	net = tf.layers.dense(net, 100, activation=tf.nn.relu)
-	net = tf.layers.dense(net, output, activation=None)
-
-	return net
+def CNN(net, output):
+	print("slim**************")
+	with slim.arg_scope([slim.conv2d, slim.fully_connected],
+						activation_fn=tf.nn.relu):
+		net = slim.conv2d(net, 300, 3, padding='VALID',
+						  weights_initializer=tf.contrib.layers.xavier_initializer())
+		net = slim.max_pool2d(net, 2, padding='SAME')
+		net = slim.conv2d(net, 200, 3, padding='VALID',
+						  weights_initializer=tf.contrib.layers.xavier_initializer())
+		net = slim.max_pool2d(net, 2, padding='SAME')
+		net = slim.flatten(net)
+		net = slim.fully_connected(net, 200)
+		net = slim.fully_connected(net, 100)
+		logits = slim.fully_connected(net, output, activation_fn=None)
+	return logits
 
 
 def DCCNN(patch, spectrum, output):
